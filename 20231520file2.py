@@ -2,13 +2,13 @@ import streamlit as st
 import os
 from dotenv import load_dotenv
 
-# .env 파일에서 환경 변수 로드 (로컬 환경용)
+# .env 파일에서 제미나이를 연동하기 위한 코드 
 load_dotenv()
 
-# API 키 확인 - Streamlit Cloud의 경우 secrets 사용, 로컬의 경우 .env 사용
+# API 키 확인 - Streamlit Cloud의 경우 secrets 사용, 아닐 땐 .env 사용
 GOOGLE_API_KEY = None
 try:
-    # Streamlit Cloud에서는 secrets 사용
+    # Streamlit Cloud에서는 secrets 사용 (그래서 .env 파일 사용 안 함)
     if hasattr(st, 'secrets') and "GOOGLE_API_KEY" in st.secrets:
         GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
 except:
@@ -26,8 +26,7 @@ if not GOOGLE_API_KEY:
     st.stop()
 
 
-# 1. 한국어 조사(이/가, 을/를) 자동 처리 함수
-# 목적: 상품명과 평가 항목의 받침 유무를 판별하여 자연스러운 문장 구성
+# 1. 한국어 조사 자동 처리 함수 (가시성 및 자연스러움 확보)
 def get_josa(word, josa_type):
     if not word: return ""
     last_char = word[-1]
@@ -40,11 +39,11 @@ def get_josa(word, josa_type):
             return f"{word}을" if has_batchim else f"{word}를"
     return word
 
-# 2. 메인 화면 설정
+# [cite_start]2. 메인 화면 및 학습 목표 설정 [cite: 349, 380]
 st.title("🛒 우리 집 '합리적 소비' 매니저")
 st.subheader("합리적으로 선택해 보아요.")
 
-# 3. 주제 및 데이터 정의
+# [cite_start]3. 주제별 기본 데이터 정의 (교과 내용 CK 연계) [cite: 349, 393]
 THEMES = {
     "음식": {"items": ["치킨", "피자", "햄버거", "떡볶이"], "criteria": ["맛", "양", "배달 속도"]},
     "신발": {"items": ["운동화", "구두", "샌들", "슬리퍼"], "criteria": ["디자인", "착용감", "내구성"]},
@@ -52,81 +51,70 @@ THEMES = {
     "학용품": {"items": ["연필", "샤프", "볼펜", "만년필"], "criteria": ["디자인", "필기감", "내구성"]}
 }
 
-# 4. 예산 및 주제 설정 (자원의 희소성 인식)
+# [cite_start]4. 예산 및 주제 설정 (자원의 희소성 인식) [cite: 418, 503]
 st.divider()
-st.write("### 💰 탐구 시작하기")
+st.write("### 💰 1단계: 탐구 상황 설정")
 col_start1, col_start2 = st.columns(2)
 with col_start1:
     choice_theme = st.selectbox("어떤 물건을 사고 싶나요?", list(THEMES.keys()))
 with col_start2:
     budget = st.number_input("💵 오늘 쓸 수 있는 최대 예산은? (원)", min_value=0, value=30000, step=1000)
 
-# 5. 경제성 점수 계산 함수 (가격이 낮을수록 고득점 부여)
-def calculate_price_score(price, budget):
-    if price > budget or budget == 0: return 0
-    return (1 - (price / budget)) * 10 
+# [cite_start]5. ★과정안 반영 핵심 기능: 선택 기준 추가 (의사결정모형 단계 구현) [cite: 262, 266]
+st.write("### 📋 2단계: 나만의 선택 기준 만들기")
+custom_criteria = st.text_input("기본 기준 외에 추가하고 싶은 기준이 있나요? (예: 브랜드 가치, 환경 보호 등)")
+# 학생들이 토의를 통해 정한 새로운 기준을 리스트에 병합함
+final_criteria = THEMES[choice_theme]["criteria"]
+if custom_criteria:
+    final_criteria = final_criteria + [custom_criteria]
+st.info(f"현재 적용된 기준: **{', '.join(final_criteria)}**")
 
-# 6. 대안 입력 및 다각적 평가 (TK 구현)
+# [cite_start]6. 대안 입력 및 평가 (TK 구현) [cite: 349, 421]
+st.divider()
+st.write("### 📊 3단계: 대안 평가하기")
 col_a, col_b = st.columns(2)
-items_list, criteria_list = THEMES[choice_theme]["items"], THEMES[choice_theme]["criteria"]
 
 # --- 대안 A 설정 ---
 with col_a:
     st.markdown("#### 🅰️ 대안 A")
-    item_a_sel = st.selectbox("후보 선택", items_list + ["직접 입력"], key="item_a_sel")
+    item_a_sel = st.selectbox("후보 선택", THEMES[choice_theme]["items"] + ["직접 입력"], key="item_a_sel")
     item_a = st.text_input("상품 이름", key="item_a_custom") if item_a_sel == "직접 입력" else item_a_sel
     price_a = st.number_input(f"{item_a} 가격 (원)", min_value=0, value=0, key="p_a")
-    scores_a_val = [st.slider(f"{item_a} - {crit}", 0, 10, 5, key=f"a_{crit}") for crit in criteria_list]
-    p_score_a = calculate_price_score(price_a, budget)
+    
+    scores_a_val = [st.slider(f"{item_a} - {crit}", 0, 10, 5, key=f"a_{crit}") for crit in final_criteria]
+    p_score_a = (1 - (price_a / budget)) * 10 if price_a <= budget and budget > 0 else 0
     st.caption(f"💰 경제성 점수: {p_score_a:.1f}/10점")
-    eval_a = dict(zip(criteria_list + ["경제성"], scores_a_val + [p_score_a]))
+    eval_a = dict(zip(final_criteria + ["경제성"], scores_a_val + [p_score_a]))
     avg_a = sum(eval_a.values()) / len(eval_a)
 
 # --- 대안 B 설정 ---
 with col_b:
     st.markdown("#### 🅱️ 대안 B")
-    item_b_sel = st.selectbox("후보 선택", items_list + ["직접 입력"], key="item_b_sel")
+    item_b_sel = st.selectbox("후보 선택", THEMES[choice_theme]["items"] + ["직접 입력"], key="item_b_sel")
     item_b = st.text_input("상품 이름", key="item_b_custom") if item_b_sel == "직접 입력" else item_b_sel
     price_b = st.number_input(f"{item_b} 가격 (원)", min_value=0, value=0, key="p_b")
-    scores_b_val = [st.slider(f"{item_b} - {crit}", 0, 10, 5, key=f"b_{crit}") for crit in criteria_list]
-    p_score_b = calculate_price_score(price_b, budget)
+    
+    scores_b_val = [st.slider(f"{item_b} - {crit}", 0, 10, 5, key=f"b_{crit}") for crit in final_criteria]
+    p_score_b = (1 - (price_b / budget)) * 10 if price_b <= budget and budget > 0 else 0
     st.caption(f"💰 경제성 점수: {p_score_b:.1f}/10점")
-    eval_b = dict(zip(criteria_list + ["경제성"], scores_b_val + [p_score_b]))
+    eval_b = dict(zip(final_criteria + ["경제성"], scores_b_val + [p_score_b]))
     avg_b = sum(eval_b.values()) / len(eval_b)
 
-# 7. AI 매니저 분석 및 기회비용 상세 리포트
-if st.button("🤖 AI 매니저에게 합리성 분석 요청하기"):
-    st.divider()
+# [cite_start]7. AI 분석 결과 및 기회비용 리포트 [cite: 424, 485]
+if st.button("🤖 4단계: AI 매니저 분석 결과 보기"):
     if price_a > budget and price_b > budget:
         st.error(f"🚨 예산 내에서 선택 가능한 상품이 없습니다.")
     elif price_a == 0 or price_b == 0:
-        st.warning("분석을 위해 가격을 입력해주세요.")
+        st.warning("분석을 위해 가격 정보를 입력해주세요.")
     else:
         st.success("### 📊 AI 매니저의 종합 가치 분석")
-        if avg_a > avg_b:
-            best, other, b_eval, o_eval, b_avg, o_avg = item_a, item_b, eval_a, eval_b, avg_a, avg_b
-        else:
-            best, other, b_eval, o_eval, b_avg, o_avg = item_b, item_a, eval_b, eval_a, avg_b, avg_a
-            
+        best, other, b_eval, o_eval, b_avg, o_avg = (item_a, item_b, eval_a, eval_b, avg_a, avg_b) if avg_a > avg_b else (item_b, item_a, eval_b, eval_a, avg_b, avg_a)
         st.write(f"✅ AI 추천: **{get_josa(best, '이/가')} {other}보다** 약 **{b_avg - o_avg:.1f}점** 더 합리적입니다.")
         
-        # 기회비용 분석: 선택하지 않은 대안이 더 뛰어났던 순수 항목명 추출
-        lost_advantages = [k for k, v in o_eval.items() if v > b_eval[k]]
-        
-        if lost_advantages:
-            # 중복 방지를 위해 원본 리스트를 보존하고 출력용 문자열만 생성
-            adv_text = " 및 ".join([f"**{a}**" for a in lost_advantages])
-            # 마지막 항목 단어만 추출하여 조사('을/를')를 붙여 중복 현상 방지
-            last_item_with_josa = get_josa(lost_advantages[-1], "을/를")
-            
-            # 문장 구성 시 '및'으로 연결된 앞부분과 조사가 붙은 마지막 단어를 결합
-            if len(lost_advantages) > 1:
-                # 앞 항목들 리스트(마지막 제외)
-                prefix_text = " 및 ".join([f"**{a}**" for a in lost_advantages[:-1]])
-                st.warning(f"💡 **기회비용 확인:** {get_josa(best, '을/를')} 선택하면 {get_josa(other, '이/가')} 가진 {prefix_text} 및 **{last_item_with_josa}** 포기하게 됩니다.")
-            else:
-                st.warning(f"💡 **기회비용 확인:** {get_josa(best, '을/를')} 선택하면 {get_josa(other, '이/가')} 가진 **{last_item_with_josa}** 포기하게 됩니다.")
-        else:
-            st.warning(f"💡 **기회비용 확인:** {get_josa(best, '을/를')} 선택하면 {other}라는 대안 자체를 포기하게 됩니다.")
-            
+        lost_adv = [k for k, v in o_eval.items() if v > b_eval[k]]
+        if lost_adv:
+            prefix = " 및 ".join([f"**{a}**" for a in lost_adv[:-1]])
+            last_with_josa = get_josa(lost_adv[-1], "을/를")
+            msg = f"{prefix} 및 **{last_with_josa}**" if prefix else f"**{last_with_josa}**"
+            st.warning(f"💡 **기회비용 확인:** {get_josa(best, '을/를')} 선택하면 {get_josa(other, '이/가')} 가진 {msg} 포기하게 됩니다.")
         st.info("⚠️ 최종 결정은 AI가 아닌 여러분의 가치관에 따라 내려야 합니다.")
