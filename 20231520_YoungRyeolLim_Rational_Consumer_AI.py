@@ -26,7 +26,7 @@ if not GOOGLE_API_KEY:
     st.stop()
 
 
-# 1. 한국어 조사 자동 처리 함수 (자연스러움 확보)
+# 1. 한국어 조사 자동 처리 함수 (if 문을 통해 자음, 모음 판단하여 은,는,이,가 주격 조사 적용. 자연스러움 확보)
 def get_josa(word, josa_type):
     if not word: return ""
     last_char = word[-1]
@@ -39,11 +39,11 @@ def get_josa(word, josa_type):
             return f"{word}을" if has_batchim else f"{word}를"
     return word
 
-# 2. 메인 화면 및 학습 목표 설정 코드
+# 2. 학생에게 보여지는 메인 화면 및 학습 목표 설정 코드
 st.title("🛒 우리 집 '합리적 소비' 매니저")
 st.subheader("합리적으로 선택해 보아요.")
 
-# 3. 주제별 기본 데이터 정의 (교과 내용 CK 연계) 
+# 3. 리스트를 활용하여 주제별 기본 데이터 정의 (교과 내용 CK 연계) 
 THEMES = {
     "음식": {"items": ["치킨", "피자", "햄버거", "떡볶이"], "criteria": ["맛", "양", "배달 속도"]},
     "신발": {"items": ["운동화", "구두", "샌들", "슬리퍼"], "criteria": ["디자인", "착용감", "내구성"]},
