@@ -1,4 +1,5 @@
 import streamlit as st
+import requests
 import os
 from dotenv import load_dotenv
 
@@ -12,6 +13,7 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 if not GOOGLE_API_KEY:
     st.error("⚠️ .env 파일에서 GOOGLE_API_KEY를 찾을 수 없습니다! 파일명과 내용을 확인해주세요.")
     st.stop()
+
 # 1. 학생들에게 보여질 메인 화면 제목 및 학습 목표 설정
 st.title("🛒 우리 집 '합리적 소비' 매니저")
 st.subheader("6학년 2학기 사회: 합리적 선택과 기회비용")
