@@ -26,7 +26,7 @@ if not GOOGLE_API_KEY:
     st.stop()
 
 
-# 1. 한국어 조사 자동 처리 함수 (가시성 및 자연스러움 확보)
+# 1. 한국어 조사 자동 처리 함수 (자연스러움 확보)
 def get_josa(word, josa_type):
     if not word: return ""
     last_char = word[-1]
@@ -39,11 +39,11 @@ def get_josa(word, josa_type):
             return f"{word}을" if has_batchim else f"{word}를"
     return word
 
-# [cite_start]2. 메인 화면 및 학습 목표 설정 [cite: 349, 380]
+# 2. 메인 화면 및 학습 목표 설정 코드
 st.title("🛒 우리 집 '합리적 소비' 매니저")
 st.subheader("합리적으로 선택해 보아요.")
 
-# [cite_start]3. 주제별 기본 데이터 정의 (교과 내용 CK 연계) [cite: 349, 393]
+# 3. 주제별 기본 데이터 정의 (교과 내용 CK 연계) 
 THEMES = {
     "음식": {"items": ["치킨", "피자", "햄버거", "떡볶이"], "criteria": ["맛", "양", "배달 속도"]},
     "신발": {"items": ["운동화", "구두", "샌들", "슬리퍼"], "criteria": ["디자인", "착용감", "내구성"]},
@@ -51,7 +51,7 @@ THEMES = {
     "학용품": {"items": ["연필", "샤프", "볼펜", "만년필"], "criteria": ["디자인", "필기감", "내구성"]}
 }
 
-# [cite_start]4. 예산 및 주제 설정 (자원의 희소성 인식) [cite: 418, 503]
+#4. 예산 및 주제 설정 (자원의 희소성 인식)
 st.divider()
 st.write("### 💰 1단계: 탐구 상황 설정")
 col_start1, col_start2 = st.columns(2)
@@ -60,21 +60,21 @@ with col_start1:
 with col_start2:
     budget = st.number_input("💵 오늘 쓸 수 있는 최대 예산은? (원)", min_value=0, value=30000, step=1000)
 
-# [cite_start]5. ★과정안 반영 핵심 기능: 선택 기준 추가 (의사결정모형 단계 구현) [cite: 262, 266]
+# 5. 선택 기준 추가 (의사결정모형 단계 구현)
 st.write("### 📋 2단계: 나만의 선택 기준 만들기")
 custom_criteria = st.text_input("기본 기준 외에 추가하고 싶은 기준이 있나요? (예: 브랜드 가치, 환경 보호 등)")
-# 학생들이 토의를 통해 정한 새로운 기준을 리스트에 병합함
+# 학생들이 토의를 통해 정한 새로운 기준을 리스트에 병합하는 코드
 final_criteria = THEMES[choice_theme]["criteria"]
 if custom_criteria:
     final_criteria = final_criteria + [custom_criteria]
 st.info(f"현재 적용된 기준: **{', '.join(final_criteria)}**")
 
-# [cite_start]6. 대안 입력 및 평가 (TK 구현) [cite: 349, 421]
+# 6. 대안 입력 및 평가 (TK 구현)
 st.divider()
 st.write("### 📊 3단계: 대안 평가하기")
 col_a, col_b = st.columns(2)
 
-# --- 대안 A 설정 ---
+# 대안 A 설정
 with col_a:
     st.markdown("#### 🅰️ 대안 A")
     item_a_sel = st.selectbox("후보 선택", THEMES[choice_theme]["items"] + ["직접 입력"], key="item_a_sel")
@@ -87,7 +87,7 @@ with col_a:
     eval_a = dict(zip(final_criteria + ["경제성"], scores_a_val + [p_score_a]))
     avg_a = sum(eval_a.values()) / len(eval_a)
 
-# --- 대안 B 설정 ---
+# 대안 B 설정
 with col_b:
     st.markdown("#### 🅱️ 대안 B")
     item_b_sel = st.selectbox("후보 선택", THEMES[choice_theme]["items"] + ["직접 입력"], key="item_b_sel")
@@ -100,7 +100,7 @@ with col_b:
     eval_b = dict(zip(final_criteria + ["경제성"], scores_b_val + [p_score_b]))
     avg_b = sum(eval_b.values()) / len(eval_b)
 
-# [cite_start]7. AI 분석 결과 및 기회비용 리포트 [cite: 424, 485]
+# 7. AI 분석 결과 및 기회비용 리포트
 if st.button("🤖 4단계: AI 매니저 분석 결과 보기"):
     if price_a > budget and price_b > budget:
         st.error(f"🚨 예산 내에서 선택 가능한 상품이 없습니다.")
