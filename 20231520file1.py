@@ -3,17 +3,14 @@ import requests
 import os
 from dotenv import load_dotenv
 
-# .env 파일에서 환경 변수 로드 (로컬 환경용)
+# .env 파일에서 환경 변수 로드
 load_dotenv()
 
-# API 키 확인 - Streamlit Cloud의 경우 secrets 사용, 로컬의 경우 .env 사용
-if "GOOGLE_API_KEY" in st.secrets:
-    GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
-else:
-    GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+# API 키 확인
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 if not GOOGLE_API_KEY or GOOGLE_API_KEY == "your_api_key_here":
-    st.error("⚠️ .env 파일 또는 Streamlit Secrets에 GOOGLE_API_KEY를 설정해주세요!")
+    st.error("⚠️ .env 파일에 GOOGLE_API_KEY를 설정해주세요!")
     st.stop()
 
 # 1. 학생들에게 보여질 메인 화면 제목 및 학습 목표 설정
