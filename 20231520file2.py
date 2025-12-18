@@ -25,103 +25,105 @@ if not GOOGLE_API_KEY:
     st.error("Streamlit Cloud: Secrets에 GOOGLE_API_KEY를 설정하세요.")
     st.stop()
 
-# 1. 메인 화면 설정 및 사용자 시선 집중
-st.title("🛒 우리 집 '합리적 소비' 매니저")
-st.subheader("합리적으로 선택해 보아요.") # 요구사항 1 반영
 
-# 2. 주제 및 기준 데이터 사전 정의 (내용 지식 CK와 연계)
-# [cite_start]주제별로 하위 항목과 평가 기준을 다르게 설정하여 탐구의 깊이를 더함 [cite: 106]
+# 1. 메인 화면 및 학습 목표 설정
+st.title("🛒 우리 집 '합리적 소비' 매니저")
+st.subheader("합리적으로 선택해 보아요.")
+
+# 2. 주제별 데이터 정의 (내용 지식 CK 연계)
 THEMES = {
     "음식": {
         "items": ["치킨", "피자", "햄버거", "떡볶이"],
-        "criteria": ["맛", "양(포만감)", "배달 속도", "영양 성분"]
+        "criteria": ["맛", "양(포만감)", "배달 속도"]
     },
     "신발": {
         "items": ["운동화", "구두", "샌들", "슬리퍼"],
-        "criteria": ["디자인", "착용감(편안함)", "내구성", "브랜드 가치"]
+        "criteria": ["디자인", "착용감", "내구성"]
     },
     "가방": {
         "items": ["백팩", "에코백", "크로스백", "캐리어"],
-        "criteria": ["디자인", "수납 공간", "무게", "재질"]
+        "criteria": ["디자인", "수납 공간", "무게"]
     },
     "학용품": {
         "items": ["연필", "샤프", "볼펜", "만년필"],
-        "criteria": ["디자인", "필기감", "내구성", "가격 대비 성능"]
+        "criteria": ["디자인", "필기감", "내구성"]
     }
 }
 
-# [cite_start]3. 주목도 높은 예산 및 주제 설정 영역 (TK 기능 활용) [cite: 108, 110]
+# 3. 예산 및 주제 설정
 st.divider()
 st.write("### 💰 탐구 시작하기")
 col_start1, col_start2 = st.columns(2)
 
 with col_start1:
-    # 학생들이 가장 먼저 결정해야 할 '주제' 선택창
     choice_theme = st.selectbox("어떤 물건을 사고 싶나요?", list(THEMES.keys()))
 
 with col_start2:
-    # 주목을 끌 수 있는 큰 입력창으로 예산 설정 (요구사항 2 반영)
     budget = st.number_input("💵 오늘 쓸 수 있는 최대 예산은? (원)", min_value=0, value=30000, step=1000)
 
-# 4. 대안 선택 및 다각적 점수 매기기 (요구사항 3, 4 반영)
-# [cite_start]단순히 가격만 보는 것이 아니라 여러 가치를 비교하게 함 [cite: 111]
-st.info(f"선택한 주제: **{choice_theme}** | 목표: **{budget:,}원** 안에서 가장 가치 있는 선택을 하세요!")
+st.info(f"현재 주제: **{choice_theme}** | 나의 예산: **{budget:,}원**")
 
+# 4. 대안 입력 및 다각적 평가 (가격을 점수에 포함)
 col_a, col_b = st.columns(2)
 items_list = THEMES[choice_theme]["items"]
 criteria_list = THEMES[choice_theme]["criteria"]
 
-# 대안 A 설정 영역
+# 가격을 점수(0~10점)로 환산하는 로직: 예산에 가까울수록 0점, 0원에 가까울수록 10점
+def calculate_price_score(price, budget):
+    if price > budget: return 0
+    if budget == 0: return 0
+    return (1 - (price / budget)) * 10 
+
+# --- 대안 A 설정 ---
 with col_a:
     st.markdown("#### 🅰️ 대안 A")
     item_a = st.selectbox("첫 번째 후보", items_list, key="item_a")
-    price_a = st.number_input(f"{item_a}의 가격 (원)", min_value=0, value=0, key="p_a")
+    price_a = st.number_input(f"{item_a} 가격 (원)", min_value=0, value=0, key="p_a")
     
-    st.write("✨ **평가 점수 (각 10점 만점)**")
+    st.write("**✨ 항목별 만족도 점수**")
     scores_a = []
     for crit in criteria_list:
-        score = st.slider(f"{item_a} - {crit}", 0, 10, 5, key=f"a_{crit}")
-        scores_a.append(score)
+        s = st.slider(f"{item_a} - {crit}", 0, 10, 5, key=f"a_{crit}")
+        scores_a.append(s)
+    
+    # 경제성 점수 자동 계산 및 합산
+    p_score_a = calculate_price_score(price_a, budget)
+    st.caption(f"💰 경제성 점수(자동): {p_score_a:.1f}/10점")
+    scores_a.append(p_score_a)
     avg_a = sum(scores_a) / len(scores_a)
 
-# 대안 B 설정 영역
+# --- 대안 B 설정 ---
 with col_b:
     st.markdown("#### 🅱️ 대안 B")
     item_b = st.selectbox("두 번째 후보", items_list, key="item_b")
-    price_b = st.number_input(f"{item_b}의 가격 (원)", min_value=0, value=0, key="p_b")
+    price_b = st.number_input(f"{item_b} 가격 (원)", min_value=0, value=0, key="p_b")
     
-    st.write("✨ **평가 점수 (각 10점 만점)**")
+    st.write("**✨ 항목별 만족도 점수**")
     scores_b = []
     for crit in criteria_list:
-        score = st.slider(f"{item_b} - {crit}", 0, 10, 5, key=f"b_{crit}")
-        scores_b.append(score)
+        s = st.slider(f"{item_b} - {crit}", 0, 10, 5, key=f"b_{crit}")
+        scores_b.append(s)
+        
+    p_score_b = calculate_price_score(price_b, budget)
+    st.caption(f"💰 경제성 점수(자동): {p_score_b:.1f}/10점")
+    scores_b.append(p_score_b)
     avg_b = sum(scores_b) / len(scores_b)
 
-# [cite_start]5. AI 매니저의 복합적 분석 및 피드백 (AI-TPACK의 핵심: TPK) [cite: 117, 121]
+# 5. AI 매니저 분석 결과 출력
 if st.button("🤖 AI 매니저에게 합리성 분석 요청하기"):
     st.divider()
-    
-    # 예산 초과 여부 먼저 확인
     if price_a > budget and price_b > budget:
-        st.error(f"🚨 경고: 두 상품 모두 예산({budget:,}원)을 초과합니다. 다른 상품을 찾아보세요!")
+        st.error(f"🚨 두 상품 모두 예산({budget:,}원)을 초과했습니다!")
     elif price_a == 0 or price_b == 0:
-        st.warning("분석을 위해 상품의 가격을 입력해주세요.")
+        st.warning("분석을 위해 상품 가격을 입력해주세요.")
     else:
-        # 가성비 수치 계산 (평균 만족도 / 가격 * 10000)
-        value_a = avg_a / price_a * 10000 if price_a <= budget else -1
-        value_b = avg_b / price_b * 10000 if price_b <= budget else -1
+        st.success("### 📊 AI 매니저의 종합 가치 분석")
         
-        st.success("### 📊 AI 매니저의 가치 분석 리포트")
-        
-        # 더 합리적인 선택지 제안 및 기회비용 언급 (CK 강화)
-        if value_a > value_b:
-            best_item, best_avg, opp_item = item_a, avg_a, item_b
+        if avg_a > avg_b:
+            best, diff, opp = item_a, avg_a - avg_b, item_b
         else:
-            best_item, best_avg, opp_item = item_b, avg_b, item_a
+            best, diff, opp = item_b, avg_b - avg_a, item_a
             
-        st.write(f"✅ AI 추천: **{best_item}**을(를) 선택하는 것이 더 합리적입니다.")
-        st.write(f"- 선택한 상품의 평균 만족도: **{best_avg:.1f}점**")
-        st.write(f"- 💡 **기회비용 확인:** {best_item}을 선택함으로써 포기하게 되는 {opp_item}의 가치도 고려했나요?")
-        
-        # [cite_start]비판적 사고 유도 [cite: 87, 88]
-        st.info("⚠️ AI는 수치로만 계산합니다. 여러분의 특별한 취향이나 상황에 따라 결과는 달라질 수 있습니다.")
+        st.write(f"✅ AI 추천: **{best}**가 대안보다 약 **{diff:.1f}점** 더 합리적입니다.")
+        st.warning(f"💡 **기회비용 확인:** {best}를 선택함으로써 {opp}의 장점들을 포기하게 됨을 잊지 마세요!")
+        st.info("⚠️ 최종 결정은 AI가 아닌 여러분의 가치관에 따라 내려야 합니다.")
